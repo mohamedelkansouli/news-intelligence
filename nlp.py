@@ -14,12 +14,12 @@ import logging
 import duckdb
 import spacy
 import stanza
-import os 
 
 # ═══════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════
-DB_PATH = os.environ.get("DB_PATH", "/home/simo/Documents/news-intelligence/news.duckdb")
+import os
+DB_PATH    = os.environ.get("DB_PATH", "/home/simo/Documents/news-intelligence/news.duckdb")
 MAX_CHARS  = 20_000
 BATCH_SIZE = 50_000
 
@@ -101,6 +101,20 @@ def run_nlp():
         return
 
     logger.info(f"{len(articles)} articles à traiter")
+
+    # Sécurité anti-doublon : supprime les mots éventuels de ces articles
+    # (ne supprime rien en cas normal car LEFT JOIN exclut déjà les traités,
+    # mais protège contre les retries après crash partiel)
+    ids = [a[0] for a in articles]
+    BATCH = 1000
+    for i in range(0, len(ids), BATCH):
+        chunk        = ids[i:i+BATCH]
+        placeholders = ",".join(["?"] * len(chunk))
+        con.execute(
+            f"DELETE FROM article_words WHERE article_id IN ({placeholders})",
+            chunk,
+        )
+    logger.info("🧹 Nettoyage préventif terminé")
 
     start      = time.time()
     total_mots = 0
