@@ -13,3 +13,5 @@ matplotlib
 pandas
 plotly
 stanza
+arabic-reshaper
+python-bidi

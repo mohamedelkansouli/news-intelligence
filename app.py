@@ -1,18 +1,21 @@
 import os
+import re
 import requests
 import streamlit as st
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import pandas as pd
 import plotly.express as px
+import arabic_reshaper
+from bidi.algorithm import get_display
 
 st.set_page_config(page_title="Word Cloud Dashboard", layout="wide")
-st.title("📊 The News Pattern")
+st.title("📊 Nuage de mots - Articles d'actualité")
 
 # ═══════════════════════════════════════════════════════
 # CONNEXION API
 # ═══════════════════════════════════════════════════════
-API_URL   = os.environ.get("API_URL") or st.secrets.get("API_URL")
+API_URL   = os.environ.get("API_URL")   or st.secrets.get("API_URL")
 API_TOKEN = os.environ.get("API_TOKEN") or st.secrets.get("API_TOKEN")
 
 def run_query(sql, params=None):
@@ -23,8 +26,40 @@ def run_query(sql, params=None):
         timeout=30,
     )
     resp.raise_for_status()
-    data = resp.json()
-    return data["rows"]
+    return resp.json()["rows"]
+
+
+# ═══════════════════════════════════════════════════════
+# FONT ARABE
+# ═══════════════════════════════════════════════════════
+ARABIC_REGEX = re.compile(r"[\u0600-\u06FF]")
+
+def find_arabic_font():
+    """Cherche une font qui supporte l'arabe sur le système."""
+    candidates = [
+        "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    return None
+
+ARABIC_FONT = find_arabic_font()
+
+def reshape_arabic_dict(words_dict):
+    """Reshape + bidi pour les mots arabes (laisse le reste intact)."""
+    out = {}
+    for word, count in words_dict.items():
+        if ARABIC_REGEX.search(word):
+            shaped = get_display(arabic_reshaper.reshape(word))
+            out[shaped] = count
+        else:
+            out[word] = count
+    return out
+
 
 # ═══════════════════════════════════════════════════════
 # SIDEBAR
@@ -48,6 +83,7 @@ else:
 
 max_words = st.sidebar.slider("Nombre de mots dans le nuage", 50, 300, 100)
 
+
 # ═══════════════════════════════════════════════════════
 # BUILD WHERE
 # ═══════════════════════════════════════════════════════
@@ -66,6 +102,7 @@ if len(date_range) == 2:
 
 where_clause = " AND ".join(filters) if filters else "1=1"
 
+
 # ═══════════════════════════════════════════════════════
 # WORD CLOUD
 # ═══════════════════════════════════════════════════════
@@ -81,16 +118,30 @@ word_counts = run_query(f"""
 """, filter_params)
 
 if word_counts:
-    words_dict = {word: count for word, count in word_counts}
-    wordcloud  = WordCloud(width=1200, height=500, background_color="white",
-                           max_words=max_words, colormap="viridis")
-    wordcloud.generate_from_frequencies(words_dict)
+    words_dict = {w: c for w, c in word_counts}
+
+    # Reshape uniquement les mots arabes
+    words_dict_display = reshape_arabic_dict(words_dict)
+
+    wc_kwargs = dict(
+        width=1200, height=500,
+        background_color="white",
+        max_words=max_words,
+        colormap="viridis",
+    )
+    if ARABIC_FONT:
+        wc_kwargs["font_path"] = ARABIC_FONT
+
+    wordcloud = WordCloud(**wc_kwargs)
+    wordcloud.generate_from_frequencies(words_dict_display)
+
     fig, ax = plt.subplots(figsize=(18, 7))
     ax.imshow(wordcloud, interpolation="bilinear")
     ax.axis("off")
     st.pyplot(fig)
 else:
     st.warning("Aucun résultat avec ces filtres")
+
 
 # ═══════════════════════════════════════════════════════
 # ÉVOLUTION TEMPORELLE
@@ -107,7 +158,9 @@ if top_words:
     )
 
     if selected_words:
-        mots_escaped = ", ".join([f"'{w.replace(chr(39), chr(39)+chr(39))}'" for w in selected_words])
+        mots_escaped = ", ".join(
+            [f"'{w.replace(chr(39), chr(39)+chr(39))}'" for w in selected_words]
+        )
 
         trend_data = run_query(f"""
             WITH filtered AS (
@@ -135,9 +188,11 @@ if top_words:
 
         if trend_data:
             df_trend  = pd.DataFrame(trend_data, columns=["Date", "Mot", "Fréquence"])
-            fig_trend = px.line(df_trend, x="Date", y="Fréquence", color="Mot",
-                                title="Fréquence relative (corrigée du volume)",
-                                markers=True, line_shape="spline")
+            fig_trend = px.line(
+                df_trend, x="Date", y="Fréquence", color="Mot",
+                title="Fréquence relative (corrigée du volume)",
+                markers=True, line_shape="spline",
+            )
             fig_trend.update_layout(height=450)
             st.plotly_chart(fig_trend, use_container_width=True)
         else:
