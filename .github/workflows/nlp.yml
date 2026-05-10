@@ -1,0 +1,54 @@
+name: 🧠 NLP & Nettoyage
+
+on:
+  # Se déclenche automatiquement après que "Ingestion RSS" termine
+  workflow_run:
+    workflows: ["📰 Ingestion RSS"]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  nlp:
+    # Tourne uniquement si l'ingestion a réussi
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: 📥 Checkout du repo
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Installation des dépendances
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🧠 Extraction NLP
+        env:
+          MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+        run: python nlp.py
+
+      - name: 📊 Statistiques
+        if: always()
+        env:
+          MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+        run: |
+          python3 << 'EOF'
+          import os, duckdb
+          con = duckdb.connect(f"md:?motherduck_token={os.environ['MOTHERDUCK_TOKEN']}")
+          con.execute("USE news_intelligence")
+
+          total = con.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
+          today = con.execute("SELECT COUNT(*) FROM articles WHERE DATE(publish_date) = CURRENT_DATE").fetchone()[0]
+          words = con.execute("SELECT COUNT(*) FROM article_words").fetchone()[0]
+
+          print(f"📊 Articles totaux : {total}")
+          print(f"📅 Articles auj.   : {today}")
+          print(f"🔤 Mots indexés    : {words:,}")
+          EOF
