@@ -1,23 +1,27 @@
 """
-nlp.py — Extraction NLP (noms, noms propres) vers MotherDuck
-=============================================================
-Traite uniquement les articles PAS encore dans article_words (incrémental).
-Langues : EN et FR via spaCy, AR via tokenisation simple.
+nlp.py — Extraction NLP multilingue (EN, FR, AR)
+=================================================
+- EN, FR : spaCy (rapide)
+- AR     : Stanza (POS tagging arabe propre)
 
 Usage :
     python nlp.py
-    MOTHERDUCK_TOKEN=xxx python nlp.py
+
+Première exécution : Stanza télécharge ~500 MB pour l'arabe.
 """
-import os
-import re
 import time
 import logging
 import duckdb
 import spacy
+import stanza
 
 # ═══════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════
+DB_PATH    = "/home/simo/Documents/news-intelligence/news.duckdb"
+MAX_CHARS  = 20_000
+BATCH_SIZE = 50_000
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -25,87 +29,69 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-MAX_CHARS   = 20_000   # tronque les textes trop longs
-BATCH_SIZE  = 50_000   # insertions par lot
-
-
-# ═══════════════════════════════════════════════════════
-# CONNEXION
-# ═══════════════════════════════════════════════════════
-def get_connection() -> duckdb.DuckDBPyConnection:
-    md_token = os.environ.get("MOTHERDUCK_TOKEN")
-    if not md_token:
-        with open("cfg/secrets.cfg") as f:
-            md_token = f.read().split("=", 1)[1].strip().strip("'\"")
-
-    con = duckdb.connect(f"md:?motherduck_token={md_token}")
-    con.execute("USE news_intelligence")
-    logger.info("✅ Connecté à MotherDuck : news_intelligence")
-    return con
-
 
 # ═══════════════════════════════════════════════════════
 # CHARGEMENT MODÈLES
 # ═══════════════════════════════════════════════════════
-def load_models() -> dict:
-    logger.info("Chargement des modèles spaCy…")
-    return {
-        "en": spacy.load("en_core_web_sm", disable=["ner", "textcat"]),
-        "fr": spacy.load("fr_core_news_sm", disable=["ner", "textcat"]),
-    }
+def load_models():
+    logger.info("Chargement spaCy EN/FR…")
+    nlp_en = spacy.load("en_core_web_sm", disable=["ner", "textcat"])
+    nlp_fr = spacy.load("fr_core_news_sm", disable=["ner", "textcat"])
+
+    logger.info("Chargement Stanza AR (téléchargement automatique si absent)…")
+    try:
+        nlp_ar = stanza.Pipeline("ar", processors="tokenize,pos",
+                                 use_gpu=False, verbose=False)
+    except Exception:
+        logger.info("Téléchargement du modèle arabe Stanza…")
+        stanza.download("ar", verbose=False)
+        nlp_ar = stanza.Pipeline("ar", processors="tokenize,pos",
+                                 use_gpu=False, verbose=False)
+
+    return {"en": nlp_en, "fr": nlp_fr, "ar": nlp_ar}
 
 
 # ═══════════════════════════════════════════════════════
-# TOKENISATION ARABE (sans modèle spaCy)
+# EXTRACTION
 # ═══════════════════════════════════════════════════════
-_AR_STOP = {
-    "في", "من", "على", "إلى", "عن", "مع", "هذا", "هذه", "التي", "الذي",
-    "كان", "كانت", "أن", "لا", "ما", "كل", "قد", "أو", "وقد", "وكان",
-    "بعد", "قبل", "حتى", "عند", "أكثر", "لقد", "ولا", "وإن",
-}
-
-def tokenize_arabic(text: str) -> list[str]:
-    """Extrait les mots arabes d'au moins 3 caractères hors stopwords."""
-    words = re.findall(r"[\u0600-\u06FF]{3,}", text)
-    return [w for w in words if w not in _AR_STOP]
-
-
-# ═══════════════════════════════════════════════════════
-# EXTRACTION MOTS PAR ARTICLE
-# ═══════════════════════════════════════════════════════
-def extract_words(article_id: str, lang: str, text: str, nlp_models: dict) -> list[tuple]:
-    text = text[:MAX_CHARS]
-
-    if lang == "ar":
-        mots = tokenize_arabic(text)
-        return [(article_id, m.lower()) for m in mots if m]
-
-    nlp = nlp_models.get(lang, nlp_models["en"])
+def extract_spacy(article_id, text, nlp):
     doc = nlp(text)
     return [
-        (article_id, token.text.lower().strip())
-        for token in doc
-        if token.pos_ in ("NOUN", "PROPN")
-        and len(token.text.strip()) > 1
+        (article_id, t.text.lower().strip())
+        for t in doc
+        if t.pos_ in ("NOUN", "PROPN") and len(t.text.strip()) > 1
     ]
 
+def extract_stanza(article_id, text, nlp):
+    doc  = nlp(text)
+    rows = []
+    for sent in doc.sentences:
+        for word in sent.words:
+            if word.upos in ("NOUN", "PROPN") and len(word.text.strip()) > 1:
+                rows.append((article_id, word.text.lower().strip()))
+    return rows
+
+def extract_words(article_id, lang, text, models):
+    text = text[:MAX_CHARS]
+    if lang == "ar":
+        return extract_stanza(article_id, text, models["ar"])
+    nlp = models.get(lang, models["en"])
+    return extract_spacy(article_id, text, nlp)
+
 
 # ═══════════════════════════════════════════════════════
-# PIPELINE PRINCIPAL
+# PIPELINE
 # ═══════════════════════════════════════════════════════
 def run_nlp():
-    con = get_connection()
-    nlp_models = load_models()
+    con    = duckdb.connect(DB_PATH)
+    models = load_models()
 
-    # Articles pas encore traités (incrémental)
     logger.info("Récupération des articles non traités…")
     articles = con.execute("""
         SELECT a.article_id, a.language, a.text
         FROM articles a
         LEFT JOIN article_words w ON a.article_id = w.article_id
-        WHERE a.text IS NOT NULL
-          AND a.text != ''
-          AND w.article_id IS NULL
+        WHERE a.text IS NOT NULL AND a.text != '' AND w.article_id IS NULL
     """).fetchall()
 
     if not articles:
@@ -122,23 +108,20 @@ def run_nlp():
 
     for i, (article_id, lang, text) in enumerate(articles):
         try:
-            mots = extract_words(article_id, lang, text, nlp_models)
-            batch_mots.extend(mots)
+            batch_mots.extend(extract_words(article_id, lang, text, models))
         except Exception as e:
-            logger.warning(f"  ⚠️  article {article_id} : {e}")
+            logger.warning(f"  ⚠️  {article_id} ({lang}) : {e}")
             errors += 1
 
-        # Insertion par lot
         if len(batch_mots) >= BATCH_SIZE:
             con.executemany("INSERT INTO article_words VALUES (?, ?)", batch_mots)
             total_mots += len(batch_mots)
             batch_mots  = []
 
-        # Log de progression
-        if (i + 1) % 500 == 0:
-            elapsed  = time.time() - start
-            vitesse  = (i + 1) / elapsed
-            eta      = (len(articles) - (i + 1)) / vitesse
+        if (i + 1) % 100 == 0:
+            elapsed = time.time() - start
+            vitesse = (i + 1) / elapsed
+            eta     = (len(articles) - (i + 1)) / vitesse
             logger.info(
                 f"  {i+1}/{len(articles)} "
                 f"({(i+1)/len(articles)*100:.1f}%) | "
@@ -148,7 +131,6 @@ def run_nlp():
                 f"ETA : {eta/60:.0f} min"
             )
 
-    # Dernier lot
     if batch_mots:
         con.executemany("INSERT INTO article_words VALUES (?, ?)", batch_mots)
         total_mots += len(batch_mots)
@@ -158,7 +140,6 @@ def run_nlp():
     logger.info(f"✅ {total_mots:,} mots insérés en {elapsed:.0f}s ({elapsed/60:.1f} min)")
     logger.info(f"   Articles traités : {len(articles)} | Erreurs : {errors}")
     logger.info("=" * 60)
-
     con.close()
 
 
