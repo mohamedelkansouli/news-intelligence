@@ -162,14 +162,15 @@ if word_counts:
     latin_total  = sum(c for w, c in words_dict.items() if not ARABIC_REGEX.search(w))
 
     if arabic_total > latin_total:
-        words_dict = {w: c for w, c in words_dict.items() if ARABIC_REGEX.search(w)}
-        words_dict = reshape_arabic_dict(words_dict)
-        font_path  = ARABIC_FONT
+        words_dict      = {w: c for w, c in words_dict.items() if ARABIC_REGEX.search(w)}
+        words_for_cloud = reshape_arabic_dict(words_dict)   # version reshape pour matplotlib
+        font_path       = ARABIC_FONT
     else:
-        words_dict = {w: c for w, c in words_dict.items() if not ARABIC_REGEX.search(w)}
-        font_path  = LATIN_FONT
+        words_dict      = {w: c for w, c in words_dict.items() if not ARABIC_REGEX.search(w)}
+        words_for_cloud = words_dict
+        font_path       = LATIN_FONT
 
-    if words_dict:
+    if words_for_cloud:
         wc = WordCloud(
             width=1200, height=500,
             background_color="white",
@@ -179,7 +180,7 @@ if word_counts:
             prefer_horizontal=0.95,
             margin=8,
         )
-        wc.generate_from_frequencies(words_dict)
+        wc.generate_from_frequencies(words_for_cloud)
 
         fig, ax = plt.subplots(figsize=(18, 7))
         ax.imshow(wc, interpolation="bilinear")
