@@ -81,7 +81,7 @@ sources_list = ["Toutes"] + [s[0] for s in sources_raw if s[0]]
 source       = st.sidebar.selectbox("Source", sources_list)
 
 languages_raw  = run_query("SELECT DISTINCT language FROM articles ORDER BY language")
-languages_list = ["Toutes"] + [l[0] for l in languages_raw if l[0]]
+languages_list = [l[0] for l in languages_raw if l[0]]
 language       = st.sidebar.selectbox("Langue", languages_list)
 
 date_row = run_query("SELECT MIN(publish_date)::DATE, MAX(publish_date)::DATE FROM articles")
@@ -103,9 +103,7 @@ filter_params = []
 if source != "Toutes":
     filters.append("a.source_name = ?")
     filter_params.append(source)
-if language != "Toutes":
-    filters.append("a.language = ?")
-    filter_params.append(language)
+
 if len(date_range) == 2:
     filters.append("a.publish_date::DATE >= ? AND a.publish_date::DATE <= ?")
     filter_params.extend([str(date_range[0]), str(date_range[1])])
