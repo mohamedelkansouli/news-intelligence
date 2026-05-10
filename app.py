@@ -109,12 +109,6 @@ language       = st.sidebar.selectbox(
     format_func=lambda x: "All" if x == "All" else LANG_LABELS.get(x, x),
 )
 
-# Quand "All" est choisi, on doit décider quel script afficher
-script = "latin"
-if language == "All":
-    script = st.sidebar.radio("Script", ["latin", "arabic"], horizontal=True,
-                              format_func=lambda x: "Latin" if x == "latin" else "Arabic")
-
 date_row = run_query("SELECT MIN(publish_date)::DATE, MAX(publish_date)::DATE FROM articles")
 min_date, max_date = date_row[0] if date_row else (None, None)
 if min_date and max_date:
@@ -163,8 +157,11 @@ word_counts = run_query(f"""
 if word_counts:
     words_dict = {w: c for w, c in word_counts}
 
-    # Filtre par script pour ne jamais avoir de mélange
-    if language == "ar" or (language == "All" and script == "arabic"):
+    # Auto-détection : on garde le script majoritaire pour éviter le mélange
+    arabic_total = sum(c for w, c in words_dict.items() if ARABIC_REGEX.search(w))
+    latin_total  = sum(c for w, c in words_dict.items() if not ARABIC_REGEX.search(w))
+
+    if arabic_total > latin_total:
         words_dict = {w: c for w, c in words_dict.items() if ARABIC_REGEX.search(w)}
         words_dict = reshape_arabic_dict(words_dict)
         font_path  = ARABIC_FONT
