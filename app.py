@@ -30,24 +30,34 @@ def run_query(sql, params=None):
 
 
 # ═══════════════════════════════════════════════════════
-# FONT ARABE
+# FONTS
 # ═══════════════════════════════════════════════════════
 ARABIC_REGEX = re.compile(r"[\u0600-\u06FF]")
 
-def find_arabic_font():
-    """Cherche une font qui supporte l'arabe sur le système."""
-    candidates = [
-        "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
-        "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/TTF/DejaVuSans.ttf",
-    ]
+def find_font(candidates):
     for path in candidates:
         if os.path.exists(path):
             return path
     return None
 
-ARABIC_FONT = find_arabic_font()
+ARABIC_FONT = find_font([
+    "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
+    "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf",
+])
+
+LATIN_FONT = find_font([
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+    "/usr/share/fonts/TTF/DejaVuSans.ttf",
+])
+
+def pick_font(words_dict):
+    """Choisit la font selon le contenu du wordcloud."""
+    arabic_count = sum(1 for w in words_dict if ARABIC_REGEX.search(w))
+    latin_count  = len(words_dict) - arabic_count
+    if arabic_count > latin_count and ARABIC_FONT:
+        return ARABIC_FONT
+    return LATIN_FONT
 
 def reshape_arabic_dict(words_dict):
     """Reshape + bidi pour les mots arabes (laisse le reste intact)."""
@@ -123,14 +133,17 @@ if word_counts:
     # Reshape uniquement les mots arabes
     words_dict_display = reshape_arabic_dict(words_dict)
 
+    # Choix automatique de la font selon le contenu
+    chosen_font = pick_font(words_dict)
+
     wc_kwargs = dict(
         width=1200, height=500,
         background_color="white",
         max_words=max_words,
         colormap="viridis",
     )
-    if ARABIC_FONT:
-        wc_kwargs["font_path"] = ARABIC_FONT
+    if chosen_font:
+        wc_kwargs["font_path"] = chosen_font
 
     wordcloud = WordCloud(**wc_kwargs)
     wordcloud.generate_from_frequencies(words_dict_display)
