@@ -14,6 +14,7 @@ import logging
 import duckdb
 import spacy
 import stanza
+import os 
 
 # ═══════════════════════════════════════════════════════
 # CONFIG
