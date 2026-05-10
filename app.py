@@ -38,8 +38,6 @@ st.markdown("""
     section[data-testid="stSidebar"] { background-color: #fafafa; border-right: 1px solid #e5e7eb; }
     section[data-testid="stSidebar"] .block-container { padding-top: 2rem; }
 
-    .stPlotlyChart, .stPyplot { border-radius: 8px; overflow: hidden; }
-
     hr { margin-top: 0.5rem; margin-bottom: 1.5rem; border-color: #e5e7eb; }
 </style>
 """, unsafe_allow_html=True)
@@ -90,44 +88,7 @@ LATIN_FONT = find_font([
 
 
 def reshape_arabic_dict(words_dict):
-    out = {}
-    for word, count in words_dict.items():
-        if ARABIC_REGEX.search(word):
-            out[get_display(arabic_reshaper.reshape(word))] = count
-        else:
-            out[word] = count
-    return out
-
-
-def split_by_script(words_dict):
-    """Sépare un dict de mots en latin / arabe."""
-    latin, arabic = {}, {}
-    for w, c in words_dict.items():
-        if ARABIC_REGEX.search(w):
-            arabic[w] = c
-        else:
-            latin[w] = c
-    return latin, arabic
-
-
-def render_wordcloud(words_dict, font_path, max_words):
-    if not words_dict:
-        return None
-    wc = WordCloud(
-        width=1200, height=500,
-        background_color="white",
-        max_words=max_words,
-        colormap="cividis",
-        font_path=font_path,
-        prefer_horizontal=0.95,
-        margin=8,
-    )
-    wc.generate_from_frequencies(words_dict)
-    fig, ax = plt.subplots(figsize=(18, 7))
-    ax.imshow(wc, interpolation="bilinear")
-    ax.axis("off")
-    fig.patch.set_facecolor("white")
-    return fig
+    return {get_display(arabic_reshaper.reshape(w)): c for w, c in words_dict.items()}
 
 
 # ═══════════════════════════════════════════════════════
@@ -145,8 +106,14 @@ languages_list = ["All"] + [l[0] for l in languages_raw if l[0]]
 language       = st.sidebar.selectbox(
     "Language",
     languages_list,
-    format_func=lambda x: LANG_LABELS.get(x, x.title() if x != "All" else "All"),
+    format_func=lambda x: "All" if x == "All" else LANG_LABELS.get(x, x),
 )
+
+# Quand "All" est choisi, on doit décider quel script afficher
+script = "latin"
+if language == "All":
+    script = st.sidebar.radio("Script", ["latin", "arabic"], horizontal=True,
+                              format_func=lambda x: "Latin" if x == "latin" else "Arabic")
 
 date_row = run_query("SELECT MIN(publish_date)::DATE, MAX(publish_date)::DATE FROM articles")
 min_date, max_date = date_row[0] if date_row else (None, None)
@@ -195,27 +162,35 @@ word_counts = run_query(f"""
 
 if word_counts:
     words_dict = {w: c for w, c in word_counts}
-    latin_dict, arabic_dict = split_by_script(words_dict)
 
-    has_latin  = len(latin_dict)  >= 5
-    has_arabic = len(arabic_dict) >= 5
-
-    if has_latin and has_arabic:
-        col1, col2 = st.columns(2)
-        with col1:
-            st.caption("Latin scripts")
-            fig = render_wordcloud(latin_dict, LATIN_FONT, max_words)
-            if fig: st.pyplot(fig)
-        with col2:
-            st.caption("Arabic script")
-            fig = render_wordcloud(reshape_arabic_dict(arabic_dict), ARABIC_FONT, max_words)
-            if fig: st.pyplot(fig)
-    elif has_arabic:
-        fig = render_wordcloud(reshape_arabic_dict(arabic_dict), ARABIC_FONT, max_words)
-        if fig: st.pyplot(fig)
+    # Filtre par script pour ne jamais avoir de mélange
+    if language == "ar" or (language == "All" and script == "arabic"):
+        words_dict = {w: c for w, c in words_dict.items() if ARABIC_REGEX.search(w)}
+        words_dict = reshape_arabic_dict(words_dict)
+        font_path  = ARABIC_FONT
     else:
-        fig = render_wordcloud(latin_dict, LATIN_FONT, max_words)
-        if fig: st.pyplot(fig)
+        words_dict = {w: c for w, c in words_dict.items() if not ARABIC_REGEX.search(w)}
+        font_path  = LATIN_FONT
+
+    if words_dict:
+        wc = WordCloud(
+            width=1200, height=500,
+            background_color="white",
+            max_words=max_words,
+            colormap="cividis",
+            font_path=font_path,
+            prefer_horizontal=0.95,
+            margin=8,
+        )
+        wc.generate_from_frequencies(words_dict)
+
+        fig, ax = plt.subplots(figsize=(18, 7))
+        ax.imshow(wc, interpolation="bilinear")
+        ax.axis("off")
+        fig.patch.set_facecolor("white")
+        st.pyplot(fig)
+    else:
+        st.info("No words to display for this script.")
 else:
     st.info("No data matches your filters.")
 
@@ -225,7 +200,7 @@ else:
 # ═══════════════════════════════════════════════════════
 st.markdown("### Trends over time")
 
-top_words = [w[0] for w in word_counts[:200]] if word_counts else []
+top_words = list(words_dict.keys())[:200] if word_counts else []
 
 if top_words:
     selected_words = st.multiselect(
