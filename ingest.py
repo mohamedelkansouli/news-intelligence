@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 TIMEOUT = 12
 
+DB_PATH = os.environ.get("DB_PATH", "/home/simo/Documents/news-intelligence/news.duckdb")
+
 # 37 sources validées (EN=14, FR=13, AR=10)
 FEEDS = [
     ("BBC News","http://feeds.bbci.co.uk/news/rss.xml","bbc.com","en"),
@@ -69,17 +71,9 @@ FEEDS = [
 # CONNEXION DB
 # ═════════════════════════════════════════════════════════════════════════════
 def get_connection():
-    """Connexion MotherDuck (token depuis env var ou cfg/secrets.cfg)."""
-    md_token = os.environ.get("MOTHERDUCK_TOKEN")
-    
-    if not md_token:
-        with open("cfg/secrets.cfg", "r") as f:
-            md_token = f.read().split("=", 1)[1].strip().strip("'\"")
-    
-    con = duckdb.connect(f"md:?motherduck_token={md_token}")
-    con.execute("CREATE DATABASE IF NOT EXISTS news_intelligence")
-    con.execute("USE news_intelligence")
-    logger.info("✅ Connecté à MotherDuck: news_intelligence")
+    con = duckdb.connect(DB_PATH)
+
+    logger.info("✅ Connecté à news.duckdb local")
     return con
 
 # ═════════════════════════════════════════════════════════════════════════════

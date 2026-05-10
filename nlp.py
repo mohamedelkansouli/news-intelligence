@@ -18,7 +18,7 @@ import stanza
 # ═══════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════
-DB_PATH    = "/home/simo/Documents/news-intelligence/news.duckdb"
+DB_PATH = os.environ.get("DB_PATH", "/home/simo/Documents/news-intelligence/news.duckdb")
 MAX_CHARS  = 20_000
 BATCH_SIZE = 50_000
 
