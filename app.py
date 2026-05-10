@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.express as px
 
 st.set_page_config(page_title="Word Cloud Dashboard", layout="wide")
-st.title("📊 Nuage de mots - Articles d'actualité")
+st.title("📊 The News Pattern")
 
 # ═══════════════════════════════════════════════════════
 # CONNEXION API
