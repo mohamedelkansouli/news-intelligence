@@ -1,0 +1,24 @@
+# Secrets — JAMAIS committer
+cfg/secrets.cfg
+.env
+*.token
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Données locales
+data/*.duckdb
+data/*.duckdb.wal
+data/*.parquet
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
