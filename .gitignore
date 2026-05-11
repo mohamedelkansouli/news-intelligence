@@ -22,3 +22,9 @@ data/*.parquet
 # OS
 .DS_Store
 Thumbs.db
+# Fichiers sensibles / volumineux / exécutables locaux
+run.sh
+logs/
+*.duckdb
+*.parquet
+*.deb
