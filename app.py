@@ -20,19 +20,123 @@ st.set_page_config(
 )
 
 # ═══════════════════════════════════════════════════════
-# CUSTOM STYLE
+# CUSTOM STYLE — REFONTE VISUELLE UNIQUEMENT
 # ═══════════════════════════════════════════════════════
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-    .block-container { padding-top: 2rem; padding-bottom: 3rem; max-width: 1400px; }
-    h1 { font-weight: 700; letter-spacing: -0.02em; font-size: 2.4rem; margin-bottom: 0; }
-    .subtitle { color: #6b7280; font-size: 1rem; margin-top: 0.2rem; margin-bottom: 2rem; font-weight: 400; }
-    h2, h3 { font-weight: 600; letter-spacing: -0.01em; }
-    section[data-testid="stSidebar"] { background-color: #fafafa; border-right: 1px solid #e5e7eb; }
-    section[data-testid="stSidebar"] .block-container { padding-top: 2rem; }
-    hr { margin-top: 0.5rem; margin-bottom: 1.5rem; border-color: #e5e7eb; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+
+    /* ------ GLOBAL ------ */
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; color: #1e293b; }
+    .block-container { padding-top: 2.5rem; padding-bottom: 3rem; max-width: 1400px; }
+
+    /* ------ HEADER ------ */
+    h1 {
+        font-family: 'Playfair Display', serif;
+        font-weight: 700;
+        font-size: 3rem;
+        letter-spacing: -0.03em;
+        margin-bottom: 0.3rem;
+        background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .subtitle {
+        color: #94a3b8;
+        font-size: 1.05rem;
+        margin-top: 0.2rem;
+        margin-bottom: 2rem;
+        font-weight: 400;
+        letter-spacing: 0.01em;
+    }
+
+    /* ------ SECTION TITLES ------ */
+    h2 {
+        font-weight: 600;
+        font-size: 1.5rem;
+        letter-spacing: -0.01em;
+        color: #334155;
+        padding-bottom: 0.3rem;
+        border-bottom: 2px solid #f1f5f9;
+    }
+    h3 {
+        font-weight: 600;
+        font-size: 1.15rem;
+        letter-spacing: -0.01em;
+        color: #475569;
+        margin-top: 1.5rem;
+    }
+
+    /* ------ SIDEBAR ------ */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+        border-right: 1px solid #e2e8f0;
+    }
+    section[data-testid="stSidebar"] .block-container { padding-top: 2.5rem; }
+    section[data-testid="stSidebar"] h3 {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #94a3b8;
+        margin-bottom: 1rem;
+        border-bottom: none;
+    }
+    section[data-testid="stSidebar"] .stSelectbox label,
+    section[data-testid="stSidebar"] .stDateInput label,
+    section[data-testid="stSidebar"] .stSlider label {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #475569;
+    }
+
+    /* ------ WIDGETS ------ */
+    .stSelectbox div[data-baseweb="select"] > div {
+        border-radius: 8px !important;
+        border-color: #e2e8f0 !important;
+    }
+    .stMultiSelect div[data-baseweb="select"] > div {
+        border-radius: 8px !important;
+        border-color: #e2e8f0 !important;
+    }
+    .stSlider > div > div > div > div {
+        background: #3b82f6 !important;
+    }
+
+    /* ------ SEPARATOR ------ */
+    hr {
+        margin-top: 0.5rem;
+        margin-bottom: 2rem;
+        border: none;
+        height: 1px;
+        background: linear-gradient(90deg, #e2e8f0 0%, transparent 100%);
+    }
+
+    /* ------ INFO BOXES ------ */
+    .stAlert {
+        border-radius: 12px !important;
+        border: 1px solid #e2e8f0 !important;
+        background: #f8fafc !important;
+    }
+
+    /* ------ CAPTION ------ */
+    .stCaption { color: #94a3b8; font-size: 0.85rem; }
+
+    /* ------ SIDEBAR FOOTER ------ */
+    section[data-testid="stSidebar"] .stCaption {
+        color: #cbd5e1;
+        font-size: 0.75rem;
+        letter-spacing: 0.03em;
+    }
+
+    /* ------ MULTISELECT TAGS ------ */
+    span[data-baseweb="tag"] {
+        background: #eff6ff !important;
+        border: 1px solid #bfdbfe !important;
+        border-radius: 6px !important;
+        color: #1e40af !important;
+        font-weight: 500 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
