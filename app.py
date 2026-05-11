@@ -25,19 +25,13 @@ st.set_page_config(
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-    html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
-
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     .block-container { padding-top: 2rem; padding-bottom: 3rem; max-width: 1400px; }
-
     h1 { font-weight: 700; letter-spacing: -0.02em; font-size: 2.4rem; margin-bottom: 0; }
     .subtitle { color: #6b7280; font-size: 1rem; margin-top: 0.2rem; margin-bottom: 2rem; font-weight: 400; }
-
     h2, h3 { font-weight: 600; letter-spacing: -0.01em; }
-
     section[data-testid="stSidebar"] { background-color: #fafafa; border-right: 1px solid #e5e7eb; }
     section[data-testid="stSidebar"] .block-container { padding-top: 2rem; }
-
     hr { margin-top: 0.5rem; margin-bottom: 1.5rem; border-color: #e5e7eb; }
 </style>
 """, unsafe_allow_html=True)
@@ -47,13 +41,13 @@ st.markdown('<p class="subtitle">Tracking what the world is talking about — ac
             unsafe_allow_html=True)
 st.markdown("---")
 
-
 # ═══════════════════════════════════════════════════════
-# API
+# API CONFIG
 # ═══════════════════════════════════════════════════════
 API_URL   = os.environ.get("API_URL")   or st.secrets.get("API_URL")
 API_TOKEN = os.environ.get("API_TOKEN") or st.secrets.get("API_TOKEN")
 
+@st.cache_data(ttl=300)
 def run_query(sql, params=None):
     resp = requests.post(
         f"{API_URL}/query",
@@ -64,9 +58,8 @@ def run_query(sql, params=None):
     resp.raise_for_status()
     return resp.json()["rows"]
 
-
 # ═══════════════════════════════════════════════════════
-# FONTS
+# FONT HELPERS
 # ═══════════════════════════════════════════════════════
 ARABIC_REGEX = re.compile(r"[\u0600-\u06FF]")
 
@@ -86,29 +79,35 @@ LATIN_FONT = find_font([
     "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
 ])
 
-
 def reshape_arabic_dict(words_dict):
     return {get_display(arabic_reshaper.reshape(w)): c for w, c in words_dict.items()}
 
-
 # ═══════════════════════════════════════════════════════
-# SIDEBAR
+# SIDEBAR FILTERS
 # ═══════════════════════════════════════════════════════
 st.sidebar.markdown("### Filters")
 
+# Source filter
 sources_raw  = run_query("SELECT DISTINCT source_name FROM articles ORDER BY source_name")
 sources_list = ["All"] + [s[0] for s in sources_raw if s[0]]
 source       = st.sidebar.selectbox("Source", sources_list)
 
+# Language filter – default to English
 languages_raw  = run_query("SELECT DISTINCT language FROM articles ORDER BY language")
 LANG_LABELS    = {"en": "English", "fr": "Français", "ar": "العربية"}
 languages_list = ["All"] + [l[0] for l in languages_raw if l[0]]
-language       = st.sidebar.selectbox(
+
+default_lang = "en" if "en" in languages_list else "All"
+lang_index = languages_list.index(default_lang)
+
+language = st.sidebar.selectbox(
     "Language",
     languages_list,
+    index=lang_index,
     format_func=lambda x: "All" if x == "All" else LANG_LABELS.get(x, x),
 )
 
+# Date range
 date_row = run_query("SELECT MIN(publish_date)::DATE, MAX(publish_date)::DATE FROM articles")
 min_date, max_date = date_row[0] if date_row else (None, None)
 if min_date and max_date:
@@ -116,14 +115,14 @@ if min_date and max_date:
 else:
     date_range = []
 
+# Max words for word cloud
 max_words = st.sidebar.slider("Words to display", 50, 300, 120)
 
 st.sidebar.markdown("---")
 st.sidebar.caption("The News Pattern · v0.1")
 
-
 # ═══════════════════════════════════════════════════════
-# WHERE
+# BUILD WHERE CLAUSE
 # ═══════════════════════════════════════════════════════
 filters, filter_params = [], []
 
@@ -139,9 +138,8 @@ if len(date_range) == 2:
 
 where_clause = " AND ".join(filters) if filters else "1=1"
 
-
 # ═══════════════════════════════════════════════════════
-# WORD CLOUD
+# WORD CLOUD (always respects language filter)
 # ═══════════════════════════════════════════════════════
 st.markdown("### Trending words")
 
@@ -157,18 +155,19 @@ word_counts = run_query(f"""
 if word_counts:
     words_dict = {w: c for w, c in word_counts}
 
-    # Auto-détection : on garde le script majoritaire pour éviter le mélange
+    # Detect dominant script for font selection
     arabic_total = sum(c for w, c in words_dict.items() if ARABIC_REGEX.search(w))
     latin_total  = sum(c for w, c in words_dict.items() if not ARABIC_REGEX.search(w))
 
     if arabic_total > latin_total:
-        words_dict      = {w: c for w, c in words_dict.items() if ARABIC_REGEX.search(w)}
-        words_for_cloud = reshape_arabic_dict(words_dict)   # version reshape pour matplotlib
-        font_path       = ARABIC_FONT
+        # keep only Arabic words for the cloud to avoid mixed scripts
+        words_dict = {w: c for w, c in words_dict.items() if ARABIC_REGEX.search(w)}
+        words_for_cloud = reshape_arabic_dict(words_dict) if words_dict else {}
+        font_path = ARABIC_FONT
     else:
-        words_dict      = {w: c for w, c in words_dict.items() if not ARABIC_REGEX.search(w)}
+        words_dict = {w: c for w, c in words_dict.items() if not ARABIC_REGEX.search(w)}
         words_for_cloud = words_dict
-        font_path       = LATIN_FONT
+        font_path = LATIN_FONT
 
     if words_for_cloud:
         wc = WordCloud(
@@ -188,29 +187,40 @@ if word_counts:
         fig.patch.set_facecolor("white")
         st.pyplot(fig)
     else:
-        st.info("No words to display for this script.")
+        st.info("No words to display for this selection.")
 else:
     st.info("No data matches your filters.")
 
-
 # ═══════════════════════════════════════════════════════
-# TRENDS OVER TIME
+# TRENDS OVER TIME – MULTI‑WORD SELECTION (PERSISTENT)
 # ═══════════════════════════════════════════════════════
 st.markdown("### Trends over time")
 
 top_words = list(words_dict.keys())[:200] if word_counts else []
 
 if top_words:
+    # Initialize or clean session state for selected words
+    if "trends_words" not in st.session_state:
+        st.session_state.trends_words = [top_words[0]] if top_words else []
+    else:
+        # Remove words that no longer exist in the current top list
+        st.session_state.trends_words = [
+            w for w in st.session_state.trends_words if w in top_words
+        ]
+        # If the list becomes empty, default to first available word
+        if not st.session_state.trends_words and top_words:
+            st.session_state.trends_words = [top_words[0]]
+
     selected_words = st.multiselect(
-        "Track specific words",
-        top_words,
-        default=[top_words[0]] if top_words else [],
+        "Track specific words (click to add, click again to remove)",
+        options=top_words,
+        key="trends_words",           # session state key for persistence
     )
 
+    # Build query only if something is selected
     if selected_words:
-        mots_escaped = ", ".join(
-            [f"'{w.replace(chr(39), chr(39)+chr(39))}'" for w in selected_words]
-        )
+        # Safely escape words (SQLite uses single quotes escaped by doubling)
+        escaped = ", ".join(f"'{w.replace(chr(39), chr(39)+chr(39))}'" for w in selected_words)
 
         trend_data = run_query(f"""
             WITH filtered AS (
@@ -222,7 +232,7 @@ if top_words:
             daily_counts AS (
                 SELECT date, word, COUNT(*) as count
                 FROM filtered
-                WHERE word IN ({mots_escaped})
+                WHERE word IN ({escaped})
                 GROUP BY date, word
             ),
             daily_totals AS (
@@ -258,6 +268,6 @@ if top_words:
         else:
             st.info("No data for these words with current filters.")
     else:
-        st.caption("Pick at least one word above.")
+        st.caption("Select at least one word to plot its trend.")
 else:
     st.caption("Adjust filters to see available words.")
