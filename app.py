@@ -9,9 +9,9 @@ import plotly.express as px
 import arabic_reshaper
 from bidi.algorithm import get_display
 
-# ═══════════════════════════════════════════════════════
-# PAGE CONFIG
-# ═══════════════════════════════════════════════════════
+# ==========================================
+# PAGE CONFIGURATION
+# ==========================================
 st.set_page_config(
     page_title="The News Pattern",
     page_icon="◐",
@@ -19,135 +19,98 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ═══════════════════════════════════════════════════════
-# CUSTOM STYLE — REFONTE VISUELLE UNIQUEMENT
-# ═══════════════════════════════════════════════════════
+# ==========================================
+# PROFESSIONAL UI STYLING
+# ==========================================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap');
 
-    /* ------ GLOBAL ------ */
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; color: #1e293b; }
-    .block-container { padding-top: 2.5rem; padding-bottom: 3rem; max-width: 1400px; }
-
-    /* ------ HEADER ------ */
-    h1 {
-        font-family: 'Playfair Display', serif;
-        font-weight: 700;
-        font-size: 3rem;
-        letter-spacing: -0.03em;
-        margin-bottom: 0.3rem;
-        background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-    .subtitle {
-        color: #94a3b8;
-        font-size: 1.05rem;
-        margin-top: 0.2rem;
-        margin-bottom: 2rem;
-        font-weight: 400;
-        letter-spacing: 0.01em;
+    :root {
+        --primary-color: #2563eb;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --bg-light: #f8fafc;
+        --border-color: #e2e8f0;
     }
 
-    /* ------ SECTION TITLES ------ */
-    h2 {
-        font-weight: 600;
-        font-size: 1.5rem;
-        letter-spacing: -0.01em;
-        color: #334155;
-        padding-bottom: 0.3rem;
-        border-bottom: 2px solid #f1f5f9;
-    }
-    h3 {
-        font-weight: 600;
-        font-size: 1.15rem;
-        letter-spacing: -0.01em;
-        color: #475569;
-        margin-top: 1.5rem;
+    /* Global Overrides */
+    .stApp { background-color: var(--bg-light); }
+    html, body, [class*="css"] { 
+        font-family: 'Plus Jakarta Sans', sans-serif; 
+        color: var(--text-main);
     }
 
-    /* ------ SIDEBAR ------ */
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-        border-right: 1px solid #e2e8f0;
+    /* Main Container */
+    .block-container { padding: 3rem 4rem !important; }
+
+    /* Typography */
+    .header-container {
+        text-align: left;
+        margin-bottom: 3rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 2rem;
     }
-    section[data-testid="stSidebar"] .block-container { padding-top: 2.5rem; }
-    section[data-testid="stSidebar"] h3 {
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #94a3b8;
-        margin-bottom: 1rem;
-        border-bottom: none;
-    }
-    section[data-testid="stSidebar"] .stSelectbox label,
-    section[data-testid="stSidebar"] .stDateInput label,
-    section[data-testid="stSidebar"] .stSlider label {
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: #475569;
+    
+    .header-container h1 {
+        font-family: 'Playfair Display', serif !important;
+        font-weight: 700 !important;
+        font-size: 3.5rem !important;
+        color: var(--text-main);
+        margin: 0;
     }
 
-    /* ------ WIDGETS ------ */
-    .stSelectbox div[data-baseweb="select"] > div {
-        border-radius: 8px !important;
-        border-color: #e2e8f0 !important;
-    }
-    .stMultiSelect div[data-baseweb="select"] > div {
-        border-radius: 8px !important;
-        border-color: #e2e8f0 !important;
-    }
-    .stSlider > div > div > div > div {
-        background: #3b82f6 !important;
-    }
-
-    /* ------ SEPARATOR ------ */
-    hr {
+    .header-container p {
+        font-size: 1.1rem;
+        color: var(--text-muted);
         margin-top: 0.5rem;
+    }
+
+    /* Section Cards */
+    .content-card {
+        background: #ffffff;
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
         margin-bottom: 2rem;
-        border: none;
-        height: 1px;
-        background: linear-gradient(90deg, #e2e8f0 0%, transparent 100%);
+        border: 1px solid var(--border-color);
     }
 
-    /* ------ INFO BOXES ------ */
-    .stAlert {
-        border-radius: 12px !important;
-        border: 1px solid #e2e8f0 !important;
-        background: #f8fafc !important;
+    h2 {
+        font-weight: 700 !important;
+        font-size: 1.4rem !important;
+        color: var(--text-main);
+        margin-bottom: 1.5rem !important;
+        display: flex;
+        align-items: center;
     }
 
-    /* ------ CAPTION ------ */
-    .stCaption { color: #94a3b8; font-size: 0.85rem; }
-
-    /* ------ SIDEBAR FOOTER ------ */
-    section[data-testid="stSidebar"] .stCaption {
-        color: #cbd5e1;
-        font-size: 0.75rem;
-        letter-spacing: 0.03em;
+    h2::before {
+        content: "";
+        width: 4px;
+        height: 20px;
+        background: var(--primary-color);
+        margin-right: 12px;
+        border-radius: 2px;
     }
 
-    /* ------ MULTISELECT TAGS ------ */
-    span[data-baseweb="tag"] {
-        background: #eff6ff !important;
-        border: 1px solid #bfdbfe !important;
-        border-radius: 6px !important;
-        color: #1e40af !important;
-        font-weight: 500 !important;
+    /* Sidebar Refinement */
+    section[data-testid="stSidebar"] {
+        background-color: #ffffff !important;
+        border-right: 1px solid var(--border-color);
+    }
+
+    /* Form Elements */
+    .stSelectbox label, .stDateInput label, .stSlider label {
+        font-weight: 600 !important;
+        color: var(--text-main) !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("# The News Pattern")
-st.markdown('<p class="subtitle">Tracking what the world is talking about — across languages, sources, time.</p>',
-            unsafe_allow_html=True)
-st.markdown("---")
-
-# ═══════════════════════════════════════════════════════
-# API CONFIG
-# ═══════════════════════════════════════════════════════
+# ==========================================
+# CORE API & DATA FUNCTIONS
+# ==========================================
 API_URL   = os.environ.get("API_URL")   or st.secrets.get("API_URL")
 API_TOKEN = os.environ.get("API_TOKEN") or st.secrets.get("API_TOKEN")
 
@@ -162,9 +125,9 @@ def run_query(sql, params=None):
     resp.raise_for_status()
     return resp.json()["rows"]
 
-# ═══════════════════════════════════════════════════════
-# FONT HELPERS
-# ═══════════════════════════════════════════════════════
+# ==========================================
+# FONT & LANGUAGE HELPERS
+# ==========================================
 ARABIC_REGEX = re.compile(r"[\u0600-\u06FF]")
 
 def find_font(candidates):
@@ -186,17 +149,25 @@ LATIN_FONT = find_font([
 def reshape_arabic_dict(words_dict):
     return {get_display(arabic_reshaper.reshape(w)): c for w, c in words_dict.items()}
 
-# ═══════════════════════════════════════════════════════
+# ==========================================
+# HEADER SECTION
+# ==========================================
+st.markdown("""
+    <div class="header-container">
+        <h1>The News Pattern</h1>
+        <p>Global Media Intelligence & Trend Analysis Dashboard</p>
+    </div>
+""", unsafe_allow_html=True)
+
+# ==========================================
 # SIDEBAR FILTERS
-# ═══════════════════════════════════════════════════════
+# ==========================================
 st.sidebar.markdown("### Filters")
 
-# Source filter
 sources_raw  = run_query("SELECT DISTINCT source_name FROM articles ORDER BY source_name")
 sources_list = ["All"] + [s[0] for s in sources_raw if s[0]]
 source       = st.sidebar.selectbox("Source", sources_list)
 
-# Language filter – default to English
 languages_raw  = run_query("SELECT DISTINCT language FROM articles ORDER BY language")
 LANG_LABELS    = {"en": "English", "fr": "Français", "ar": "العربية"}
 languages_list = ["All"] + [l[0] for l in languages_raw if l[0]]
@@ -211,23 +182,18 @@ language = st.sidebar.selectbox(
     format_func=lambda x: "All" if x == "All" else LANG_LABELS.get(x, x),
 )
 
-# Date range
 date_row = run_query("SELECT MIN(publish_date)::DATE, MAX(publish_date)::DATE FROM articles")
 min_date, max_date = date_row[0] if date_row else (None, None)
-if min_date and max_date:
-    date_range = st.sidebar.date_input("Date range", value=[min_date, max_date])
-else:
-    date_range = []
+date_range = st.sidebar.date_input("Date range", value=[min_date, max_date]) if min_date else []
 
-# Max words for word cloud
 max_words = st.sidebar.slider("Words to display", 50, 300, 120)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("The News Pattern · v0.1")
+st.sidebar.caption("System Version: 0.1.0")
 
-# ═══════════════════════════════════════════════════════
-# BUILD WHERE CLAUSE
-# ═══════════════════════════════════════════════════════
+# ==========================================
+# DATA FILTERING LOGIC
+# ==========================================
 filters, filter_params = [], []
 
 if source != "All":
@@ -242,10 +208,11 @@ if len(date_range) == 2:
 
 where_clause = " AND ".join(filters) if filters else "1=1"
 
-# ═══════════════════════════════════════════════════════
-# WORD CLOUD (always respects language filter)
-# ═══════════════════════════════════════════════════════
-st.markdown("### Trending words")
+# ==========================================
+# WORD CLOUD VISUALIZATION
+# ==========================================
+st.markdown('<div class="content-card">', unsafe_allow_html=True)
+st.markdown("## Trending keywords")
 
 word_counts = run_query(f"""
     SELECT w.word, COUNT(*) as count
@@ -258,13 +225,10 @@ word_counts = run_query(f"""
 
 if word_counts:
     words_dict = {w: c for w, c in word_counts}
-
-    # Detect dominant script for font selection
     arabic_total = sum(c for w, c in words_dict.items() if ARABIC_REGEX.search(w))
     latin_total  = sum(c for w, c in words_dict.items() if not ARABIC_REGEX.search(w))
 
     if arabic_total > latin_total:
-        # keep only Arabic words for the cloud to avoid mixed scripts
         words_dict = {w: c for w, c in words_dict.items() if ARABIC_REGEX.search(w)}
         words_for_cloud = reshape_arabic_dict(words_dict) if words_dict else {}
         font_path = ARABIC_FONT
@@ -275,57 +239,48 @@ if word_counts:
 
     if words_for_cloud:
         wc = WordCloud(
-            width=1200, height=500,
+            width=1200, height=450,
             background_color="white",
             max_words=max_words,
-            colormap="cividis",
+            colormap="Blues_r",
             font_path=font_path,
-            prefer_horizontal=0.95,
-            margin=8,
+            prefer_horizontal=0.9,
         )
         wc.generate_from_frequencies(words_for_cloud)
-
-        fig, ax = plt.subplots(figsize=(18, 7))
+        fig, ax = plt.subplots(figsize=(16, 6))
         ax.imshow(wc, interpolation="bilinear")
         ax.axis("off")
-        fig.patch.set_facecolor("white")
         st.pyplot(fig)
     else:
-        st.info("No words to display for this selection.")
+        st.info("No data available for the current selection.")
 else:
-    st.info("No data matches your filters.")
+    st.info("No data matches selected filters.")
+st.markdown('</div>', unsafe_allow_html=True)
 
-# ═══════════════════════════════════════════════════════
-# TRENDS OVER TIME – MULTI‑WORD SELECTION (PERSISTENT)
-# ═══════════════════════════════════════════════════════
-st.markdown("### Trends over time")
+# ==========================================
+# TREND ANALYSIS SECTION
+# ==========================================
+st.markdown('<div class="content-card">', unsafe_allow_html=True)
+st.markdown("## Temporal Trends")
 
 top_words = list(words_dict.keys())[:200] if word_counts else []
 
 if top_words:
-    # Initialize or clean session state for selected words
     if "trends_words" not in st.session_state:
         st.session_state.trends_words = [top_words[0]] if top_words else []
     else:
-        # Remove words that no longer exist in the current top list
-        st.session_state.trends_words = [
-            w for w in st.session_state.trends_words if w in top_words
-        ]
-        # If the list becomes empty, default to first available word
+        st.session_state.trends_words = [w for w in st.session_state.trends_words if w in top_words]
         if not st.session_state.trends_words and top_words:
             st.session_state.trends_words = [top_words[0]]
 
     selected_words = st.multiselect(
-        "Track specific words (click to add, click again to remove)",
+        "Track keyword frequency over time",
         options=top_words,
-        key="trends_words",           # session state key for persistence
+        key="trends_words"
     )
 
-    # Build query only if something is selected
     if selected_words:
-        # Safely escape words (SQLite uses single quotes escaped by doubling)
         escaped = ", ".join(f"'{w.replace(chr(39), chr(39)+chr(39))}'" for w in selected_words)
-
         trend_data = run_query(f"""
             WITH filtered AS (
                 SELECT a.publish_date::DATE as date, w.word
@@ -355,23 +310,23 @@ if top_words:
             fig = px.line(
                 df, x="Date", y="Share", color="Word",
                 markers=True, line_shape="spline",
+                color_discrete_sequence=px.colors.qualitative.Prism
             )
             fig.update_layout(
                 height=450,
-                margin=dict(l=20, r=20, t=20, b=20),
-                plot_bgcolor="white",
-                paper_bgcolor="white",
-                xaxis=dict(gridcolor="#f3f4f6", title=""),
-                yaxis=dict(gridcolor="#f3f4f6", title="Share of mentions",
-                           tickformat=".1%"),
-                legend=dict(orientation="h", y=-0.15, x=0),
-                font=dict(family="Inter", size=12, color="#374151"),
+                margin=dict(l=0, r=0, t=10, b=0),
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                xaxis=dict(showgrid=True, gridcolor="#f1f5f9", title=""),
+                yaxis=dict(showgrid=True, gridcolor="#f1f5f9", title="Frequency Share", tickformat=".1%"),
+                legend=dict(orientation="h", y=-0.2, x=0),
+                font=dict(family="Plus Jakarta Sans", size=12),
             )
-            fig.update_traces(line=dict(width=2.5))
             st.plotly_chart(fig, use_container_width=True)
         else:
-            st.info("No data for these words with current filters.")
+            st.info("Insufficient data for the selected keywords.")
     else:
-        st.caption("Select at least one word to plot its trend.")
+        st.caption("Select keywords to visualize trends.")
 else:
-    st.caption("Adjust filters to see available words.")
+    st.caption("Adjust filters to refresh available keywords.")
+st.markdown('</div>', unsafe_allow_html=True)
