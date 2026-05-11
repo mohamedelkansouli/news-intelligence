@@ -1,0 +1,14 @@
+18:08:00 [INFO] Chargement spaCy EN/FR…
+18:08:04 [INFO] Chargement Stanza AR (téléchargement automatique si absent)…
+18:08:08 [INFO] Récupération des articles non traités…
+18:08:08 [INFO] 590 articles à traiter
+18:08:09 [INFO] 🧹 Nettoyage préventif terminé
+18:12:30 [INFO]   100/590 (16.9%) | 0 mots | 262s | 0.4 art/s | ETA : 21 min
+18:16:28 [INFO]   200/590 (33.9%) | 0 mots | 499s | 0.4 art/s | ETA : 16 min
+18:22:26 [INFO]   300/590 (50.8%) | 50,027 mots | 857s | 0.4 art/s | ETA : 14 min
+18:27:36 [INFO]   400/590 (67.8%) | 50,027 mots | 1167s | 0.3 art/s | ETA : 9 min
+18:34:58 [INFO]   500/590 (84.7%) | 100,230 mots | 1609s | 0.3 art/s | ETA : 5 min
+18:40:34 [INFO] ============================================================
+18:40:34 [INFO] ✅ 130,464 mots insérés en 1945s (32.4 min)
+18:40:34 [INFO]    Articles traités : 590 | Erreurs : 0
+18:40:34 [INFO] ============================================================
