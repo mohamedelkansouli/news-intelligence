@@ -1,9 +1,0 @@
-00:21:39 [INFO] Chargement spaCy EN/FR…
-00:21:44 [INFO] Chargement Stanza AR (téléchargement automatique si absent)…
-00:21:48 [INFO] Récupération des articles non traités…
-00:21:48 [INFO] 35 articles à traiter
-00:21:48 [INFO] 🧹 Nettoyage préventif terminé
-00:23:07 [INFO] ============================================================
-00:23:07 [INFO] ✅ 1,266 mots insérés en 78s (1.3 min)
-00:23:07 [INFO]    Articles traités : 35 | Erreurs : 0
-00:23:07 [INFO] ============================================================
