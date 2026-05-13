@@ -20,23 +20,31 @@ st.set_page_config(
 )
 
 # ==========================================
-# ULTRA-CLEAN UI STYLING (FLAT DESIGN)
+# FINANCIAL TIMES STYLE UI (COLORS ONLY)
 # ==========================================
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap');
 
-    /* Variables de couleurs */
     :root {
-        --primary-color: #2563eb;
-        --text-main: #0f172a;
-        --text-muted: #64748b;
-        --bg-light: #ffffff; /* Fond blanc pur pour éviter les barres */
+        --primary-color: #990f3d; /* Bordeaux FT pour l'accent */
+        --text-main: #33302e;    /* Marron très foncé / Noir doux */
+        --text-muted: #6b5a50;   /* Marron moyen */
+        --bg-paper: #fff1e5;     /* Le beige iconique du Financial Times */
+        --accent-line: #4d2d18;  /* Marron chocolat */
     }
 
-    .stApp { background-color: var(--bg-light); }
+    /* Fond de l'application */
+    .stApp { 
+        background-color: var(--bg-paper); 
+    }
 
-    /* Conteneur principal sans marges excessives */
+    /* Texte global */
+    html, body, [class*="css"], .stMarkdown, p, label { 
+        color: var(--text-main) !important;
+        font-family: 'Plus Jakarta Sans', sans-serif; 
+    }
+
     .block-container { 
         padding: 1rem !important; 
     }
@@ -44,64 +52,54 @@ st.markdown("""
         .block-container { padding: 3rem 5rem !important; }
     }
 
-    /* Header épuré sans bordures */
-    .header-container {
-        text-align: left;
-        margin-bottom: 1rem;
-        border: none !important;
-    }
-    
+    /* Header */
     .header-container h1 {
         font-family: 'Playfair Display', serif !important;
         font-weight: 700 !important;
         color: var(--text-main);
         margin: 0;
-        line-height: 1;
     }
 
-    /* Taille du titre intelligente */
     @media (max-width: 768px) {
-        .header-container h1 { font-size: 2rem !important; }
-        .header-container p { font-size: 0.9rem !important; }
+        .header-container h1 { font-size: 2.2rem !important; }
     }
     @media (min-width: 769px) {
-        .header-container h1 { font-size: 3.5rem !important; }
+        .header-container h1 { font-size: 3.8rem !important; }
     }
 
-    /* Filtres horizontaux sans fond blanc ni ombre */
+    /* Filtres transparents sur le beige */
     div[data-testid="stHorizontalBlock"] {
         background: transparent !important;
-        padding: 0 !important;
-        margin-bottom: 1rem !important;
         border: none !important;
         box-shadow: none !important;
     }
 
-    /* Titres de sections avec l'accent bleu */
+    /* Inputs (Selectbox/Slider) adaptés au thème */
+    .stSelectbox div[data-baseweb="select"] {
+        background-color: rgba(255, 255, 255, 0.4) !important;
+        border-radius: 4px !important;
+    }
+
+    /* Titres de sections avec barre marron */
     h2 {
+        font-family: 'Playfair Display', serif !important;
         font-weight: 700 !important;
-        font-size: 1.3rem !important;
+        font-size: 1.5rem !important;
         color: var(--text-main);
-        margin-top: 1.5rem !important;
-        margin-bottom: 1rem !important;
-        display: flex;
-        align-items: center;
         border: none !important;
+        margin-top: 2rem !important;
     }
 
     h2::before {
         content: "";
-        width: 4px;
-        height: 22px;
-        background: var(--primary-color);
-        margin-right: 12px;
-        border-radius: 4px;
+        width: 40px; /* Style ligne de journal */
+        height: 3px;
+        background: var(--accent-line);
+        margin-right: 15px;
     }
 
-    /* Suppression radicale de toutes les lignes Streamlit */
+    /* Suppression des éléments parasites */
     hr { display: none !important; }
-    div.stMarkdown { margin-bottom: 0px !important; }
-    .element-container { margin-bottom: 0.5rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -143,12 +141,12 @@ def reshape_arabic_dict(words_dict):
 st.markdown("""
     <div class="header-container">
         <h1>The News Pattern</h1>
-        <p style="color:#64748b; margin-top:5px;">Global Media Intelligence & Trend Analysis Dashboard</p>
+        <p style="color:#6b5a50; font-style: italic; margin-top:5px;">Global Media Intelligence & Trend Analysis Dashboard</p>
     </div>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# HORIZONTAL FILTERS (Transparent & Compact)
+# HORIZONTAL FILTERS
 # ==========================================
 c1, c2, c3, c4 = st.columns([1, 1, 1.2, 1])
 
@@ -170,10 +168,10 @@ with c3:
     date_range = st.date_input("Period", value=[min_date, max_date]) if min_date else []
 
 with c4:
-    max_words = st.slider("Max displayed words", 50, 300, 120)
+    max_words = st.slider("Limit", 50, 300, 120)
 
 # ==========================================
-# DATA FILTERING LOGIC
+# DATA FILTERING LOGIC (Inchangé)
 # ==========================================
 filters, filter_params = [], []
 if source != "All":
@@ -189,7 +187,7 @@ if len(date_range) == 2:
 where_clause = " AND ".join(filters) if filters else "1=1"
 
 # ==========================================
-# WORD CLOUD VISUALIZATION (Sans conteneur)
+# WORD CLOUD VISUALIZATION
 # ==========================================
 st.markdown("## Trending keywords")
 
@@ -214,24 +212,22 @@ if word_counts:
         font_path = LATIN_FONT
 
     if words_for_cloud:
-        wc = WordCloud(width=1200, height=500, background_color="white", max_words=max_words, colormap="Blues_r", font_path=font_path)
+        # On met le fond du nuage de mots en transparent ou beige pour qu'il se fonde
+        wc = WordCloud(width=1200, height=500, background_color="#fff1e5", max_words=max_words, colormap="Dark2", font_path=font_path)
         wc.generate_from_frequencies(words_for_cloud)
-        fig, ax = plt.subplots(figsize=(16, 7))
+        fig, ax = plt.subplots(figsize=(16, 7), facecolor='#fff1e5')
         ax.imshow(wc, interpolation="bilinear")
         ax.axis("off")
         st.pyplot(fig)
 
 # ==========================================
-# TREND ANALYSIS SECTION (Sans conteneur)
+# TREND ANALYSIS SECTION
 # ==========================================
 st.markdown("## Temporal Trends")
 
 top_words = list(words_dict.keys())[:200] if word_counts else []
 if top_words:
-    if "trends_words" not in st.session_state:
-        st.session_state.trends_words = [top_words[0]]
-    
-    selected_words = st.multiselect("Select keywords", options=top_words, key="trends_words")
+    selected_words = st.multiselect("Select keywords", options=top_words, default=[top_words[0]] if top_words else [], key="trends_words")
 
     if selected_words:
         escaped = ", ".join(f"'{w.replace(chr(39), chr(39)+chr(39))}'" for w in selected_words)
@@ -244,6 +240,15 @@ if top_words:
 
         if trend_data:
             df = pd.DataFrame(trend_data, columns=["Date", "Word", "Share"])
-            fig = px.line(df, x="Date", y="Share", color="Word", markers=True, line_shape="spline", color_discrete_sequence=px.colors.qualitative.Prism)
-            fig.update_layout(height=450, margin=dict(l=0, r=0, t=10, b=0), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+            # Palette de couleurs "Journal" pour Plotly
+            fig = px.line(df, x="Date", y="Share", color="Word", markers=True, line_shape="spline", color_discrete_sequence=px.colors.qualitative.Bold)
+            fig.update_layout(
+                height=450, 
+                margin=dict(l=0, r=0, t=10, b=0), 
+                plot_bgcolor="rgba(0,0,0,0)", 
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#33302e"),
+                xaxis=dict(gridcolor="#e5d5c5"),
+                yaxis=dict(gridcolor="#e5d5c5")
+            )
             st.plotly_chart(fig, use_container_width=True)
