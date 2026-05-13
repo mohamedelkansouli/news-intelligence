@@ -16,7 +16,7 @@ st.set_page_config(
     page_title="The News Pattern",
     page_icon="◐",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed", # Masqué par défaut pour l'épure
 )
 
 # ==========================================
@@ -42,28 +42,37 @@ st.markdown("""
     }
 
     /* Main Container */
-    .block-container { padding: 3rem 4rem !important; }
+    .block-container { padding: 2rem 5rem !important; }
 
-    /* Typography */
+    /* Header & Filter Bar */
     .header-container {
         text-align: left;
-        margin-bottom: 3rem;
-        border-bottom: 1px solid var(--border-color);
-        padding-bottom: 2rem;
+        margin-bottom: 1.5rem;
     }
     
     .header-container h1 {
         font-family: 'Playfair Display', serif !important;
         font-weight: 700 !important;
-        font-size: 3.5rem !important;
+        font-size: 3.2rem !important;
         color: var(--text-main);
         margin: 0;
     }
 
     .header-container p {
-        font-size: 1.1rem;
+        font-size: 1rem;
         color: var(--text-muted);
-        margin-top: 0.5rem;
+        margin-top: 0.2rem;
+    }
+
+    /* Horizontal Filter Bar Styling */
+    div[data-testid="stHorizontalBlock"] {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        margin-bottom: 2rem;
+        align-items: end;
     }
 
     /* Section Cards */
@@ -71,14 +80,14 @@ st.markdown("""
         background: #ffffff;
         padding: 2rem;
         border-radius: 16px;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
         margin-bottom: 2rem;
         border: 1px solid var(--border-color);
     }
 
     h2 {
         font-weight: 700 !important;
-        font-size: 1.4rem !important;
+        font-size: 1.3rem !important;
         color: var(--text-main);
         margin-bottom: 1.5rem !important;
         display: flex;
@@ -94,22 +103,15 @@ st.markdown("""
         border-radius: 2px;
     }
 
-    /* Sidebar Refinement */
-    section[data-testid="stSidebar"] {
-        background-color: #ffffff !important;
-        border-right: 1px solid var(--border-color);
-    }
-
-    /* Form Elements */
-    .stSelectbox label, .stDateInput label, .stSlider label {
-        font-weight: 600 !important;
-        color: var(--text-main) !important;
+    /* Form Elements focus */
+    .stSelectbox:focus, .stDateInput:focus {
+        border-color: var(--primary-color) !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# CORE API & DATA FUNCTIONS
+# CORE API & DATA FUNCTIONS (Inchangé)
 # ==========================================
 API_URL   = os.environ.get("API_URL")   or st.secrets.get("API_URL")
 API_TOKEN = os.environ.get("API_TOKEN") or st.secrets.get("API_TOKEN")
@@ -126,7 +128,7 @@ def run_query(sql, params=None):
     return resp.json()["rows"]
 
 # ==========================================
-# FONT & LANGUAGE HELPERS
+# FONT & LANGUAGE HELPERS (Inchangé)
 # ==========================================
 ARABIC_REGEX = re.compile(r"[\u0600-\u06FF]")
 
@@ -160,39 +162,40 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# SIDEBAR FILTERS
+# HORIZONTAL FILTERS (Anciennement Sidebar)
 # ==========================================
-st.sidebar.markdown("### Filters")
+# On crée 4 colonnes pour une disposition propre sous le titre
+col1, col2, col3, col4 = st.columns([1.5, 1.2, 1.8, 1.5])
 
-sources_raw  = run_query("SELECT DISTINCT source_name FROM articles ORDER BY source_name")
-sources_list = ["All"] + [s[0] for s in sources_raw if s[0]]
-source       = st.sidebar.selectbox("Source", sources_list)
+with col1:
+    sources_raw  = run_query("SELECT DISTINCT source_name FROM articles ORDER BY source_name")
+    sources_list = ["All"] + [s[0] for s in sources_raw if s[0]]
+    source = st.selectbox("Source", sources_list)
 
-languages_raw  = run_query("SELECT DISTINCT language FROM articles ORDER BY language")
-LANG_LABELS    = {"en": "English", "fr": "Français", "ar": "العربية"}
-languages_list = ["All"] + [l[0] for l in languages_raw if l[0]]
+with col2:
+    languages_raw  = run_query("SELECT DISTINCT language FROM articles ORDER BY language")
+    LANG_LABELS    = {"en": "English", "fr": "Français", "ar": "العربية"}
+    languages_list = ["All"] + [l[0] for l in languages_raw if l[0]]
+    default_lang = "en" if "en" in languages_list else "All"
+    lang_index = languages_list.index(default_lang)
+    
+    language = st.selectbox(
+        "Language",
+        languages_list,
+        index=lang_index,
+        format_func=lambda x: "All" if x == "All" else LANG_LABELS.get(x, x),
+    )
 
-default_lang = "en" if "en" in languages_list else "All"
-lang_index = languages_list.index(default_lang)
+with col3:
+    date_row = run_query("SELECT MIN(publish_date)::DATE, MAX(publish_date)::DATE FROM articles")
+    min_date, max_date = date_row[0] if date_row else (None, None)
+    date_range = st.date_input("Date range", value=[min_date, max_date]) if min_date else []
 
-language = st.sidebar.selectbox(
-    "Language",
-    languages_list,
-    index=lang_index,
-    format_func=lambda x: "All" if x == "All" else LANG_LABELS.get(x, x),
-)
-
-date_row = run_query("SELECT MIN(publish_date)::DATE, MAX(publish_date)::DATE FROM articles")
-min_date, max_date = date_row[0] if date_row else (None, None)
-date_range = st.sidebar.date_input("Date range", value=[min_date, max_date]) if min_date else []
-
-max_words = st.sidebar.slider("Words to display", 50, 300, 120)
-
-st.sidebar.markdown("---")
-st.sidebar.caption("System Version: 0.1.0")
+with col4:
+    max_words = st.slider("Words count", 50, 300, 120)
 
 # ==========================================
-# DATA FILTERING LOGIC
+# DATA FILTERING LOGIC (Inchangé)
 # ==========================================
 filters, filter_params = [], []
 
@@ -239,7 +242,7 @@ if word_counts:
 
     if words_for_cloud:
         wc = WordCloud(
-            width=1200, height=450,
+            width=1200, height=400,
             background_color="white",
             max_words=max_words,
             colormap="Blues_r",
@@ -247,7 +250,7 @@ if word_counts:
             prefer_horizontal=0.9,
         )
         wc.generate_from_frequencies(words_for_cloud)
-        fig, ax = plt.subplots(figsize=(16, 6))
+        fig, ax = plt.subplots(figsize=(16, 5))
         ax.imshow(wc, interpolation="bilinear")
         ax.axis("off")
         st.pyplot(fig)
@@ -313,7 +316,7 @@ if top_words:
                 color_discrete_sequence=px.colors.qualitative.Prism
             )
             fig.update_layout(
-                height=450,
+                height=400,
                 margin=dict(l=0, r=0, t=10, b=0),
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
