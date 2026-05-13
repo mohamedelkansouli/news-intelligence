@@ -170,7 +170,7 @@ with c3:
     date_range = st.date_input("Period", value=[min_date, max_date]) if min_date else []
 
 with c4:
-    max_words = st.slider("Limit", 50, 300, 120)
+    max_words = st.slider("Max displayed words", 50, 300, 120)
 
 # ==========================================
 # DATA FILTERING LOGIC
