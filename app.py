@@ -20,19 +20,24 @@ st.set_page_config(
 )
 
 # ==========================================
-# FINANCIAL TIMES STYLE UI (COLORS ONLY)
+# FINANCIAL TIMES STYLE + HEADER REMOVAL
 # ==========================================
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap');
 
     :root {
-        --primary-color: #990f3d; /* Bordeaux FT pour l'accent */
-        --text-main: #33302e;    /* Marron très foncé / Noir doux */
-        --text-muted: #6b5a50;   /* Marron moyen */
-        --bg-paper: #fff1e5;     /* Le beige iconique du Financial Times */
-        --accent-line: #4d2d18;  /* Marron chocolat */
+        --primary-color: #990f3d; 
+        --text-main: #33302e;    
+        --text-muted: #6b5a50;   
+        --bg-paper: #fff1e5;     
+        --accent-line: #4d2d18;  
     }
+
+    /* SUPPRESSION DU HEADER (Boutons Share, GitHub, etc.) */
+    header {visibility: hidden !important;}
+    footer {visibility: hidden !important;}
+    #MainMenu {visibility: hidden !important;}
 
     /* Fond de l'application */
     .stApp { 
@@ -52,7 +57,7 @@ st.markdown("""
         .block-container { padding: 3rem 5rem !important; }
     }
 
-    /* Header */
+    /* Header Titre */
     .header-container h1 {
         font-family: 'Playfair Display', serif !important;
         font-weight: 700 !important;
@@ -67,20 +72,19 @@ st.markdown("""
         .header-container h1 { font-size: 3.8rem !important; }
     }
 
-    /* Filtres transparents sur le beige */
+    /* Filtres */
     div[data-testid="stHorizontalBlock"] {
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
     }
 
-    /* Inputs (Selectbox/Slider) adaptés au thème */
     .stSelectbox div[data-baseweb="select"] {
         background-color: rgba(255, 255, 255, 0.4) !important;
         border-radius: 4px !important;
     }
 
-    /* Titres de sections avec barre marron */
+    /* Titres de sections */
     h2 {
         font-family: 'Playfair Display', serif !important;
         font-weight: 700 !important;
@@ -92,13 +96,12 @@ st.markdown("""
 
     h2::before {
         content: "";
-        width: 40px; /* Style ligne de journal */
+        width: 40px;
         height: 3px;
         background: var(--accent-line);
         margin-right: 15px;
     }
 
-    /* Suppression des éléments parasites */
     hr { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -159,8 +162,7 @@ with c2:
     languages_raw  = run_query("SELECT DISTINCT language FROM articles ORDER BY language")
     LANG_LABELS    = {"en": "English", "fr": "Français", "ar": "العربية"}
     languages_list = ["All"] + [l[0] for l in languages_raw if l[0]]
-    default_lang = "en" if "en" in languages_list else "All"
-    language = st.selectbox("Language", languages_list, index=languages_list.index(default_lang), format_func=lambda x: LANG_LABELS.get(x, x))
+    language = st.selectbox("Language", languages_list, index=languages_list.index("en") if "en" in languages_list else 0, format_func=lambda x: LANG_LABELS.get(x, x))
 
 with c3:
     date_row = run_query("SELECT MIN(publish_date)::DATE, MAX(publish_date)::DATE FROM articles")
@@ -212,7 +214,6 @@ if word_counts:
         font_path = LATIN_FONT
 
     if words_for_cloud:
-        # On met le fond du nuage de mots en transparent ou beige pour qu'il se fonde
         wc = WordCloud(width=1200, height=500, background_color="#fff1e5", max_words=max_words, colormap="Dark2", font_path=font_path)
         wc.generate_from_frequencies(words_for_cloud)
         fig, ax = plt.subplots(figsize=(16, 7), facecolor='#fff1e5')
@@ -240,7 +241,6 @@ if top_words:
 
         if trend_data:
             df = pd.DataFrame(trend_data, columns=["Date", "Word", "Share"])
-            # Palette de couleurs "Journal" pour Plotly
             fig = px.line(df, x="Date", y="Share", color="Word", markers=True, line_shape="spline", color_discrete_sequence=px.colors.qualitative.Bold)
             fig.update_layout(
                 height=450, 
