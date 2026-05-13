@@ -16,11 +16,11 @@ st.set_page_config(
     page_title="The News Pattern",
     page_icon="◐",
     layout="wide",
-    initial_sidebar_state="collapsed", # Masqué par défaut pour l'épure
+    initial_sidebar_state="collapsed",
 )
 
 # ==========================================
-# PROFESSIONAL UI STYLING
+# PROFESSIONAL UI STYLING (CORRIGÉ MOBILE & SANS BARRES)
 # ==========================================
 st.markdown("""
 <style>
@@ -31,58 +31,60 @@ st.markdown("""
         --text-main: #0f172a;
         --text-muted: #64748b;
         --bg-light: #f8fafc;
-        --border-color: #e2e8f0;
     }
 
     /* Global Overrides */
     .stApp { background-color: var(--bg-light); }
-    html, body, [class*="css"] { 
-        font-family: 'Plus Jakarta Sans', sans-serif; 
-        color: var(--text-main);
+    
+    /* Adaptabilité mobile du conteneur principal */
+    .block-container { 
+        padding: 2rem 1rem !important; 
+    }
+    @media (min-width: 768px) {
+        .block-container { padding: 3rem 5rem !important; }
     }
 
-    /* Main Container */
-    .block-container { padding: 2rem 5rem !important; }
-
-    /* Header & Filter Bar */
+    /* Suppression des barres et bordures */
     .header-container {
         text-align: left;
-        margin-bottom: 1.5rem;
+        margin-bottom: 2rem;
+        border: none !important;
     }
     
     .header-container h1 {
         font-family: 'Playfair Display', serif !important;
         font-weight: 700 !important;
-        font-size: 3.2rem !important;
         color: var(--text-main);
         margin: 0;
+        line-height: 1.1;
     }
 
-    .header-container p {
-        font-size: 1rem;
-        color: var(--text-muted);
-        margin-top: 0.2rem;
+    /* Taille du titre dynamique */
+    @media (max-width: 768px) {
+        .header-container h1 { font-size: 2.2rem !important; }
+    }
+    @media (min-width: 769px) {
+        .header-container h1 { font-size: 3.5rem !important; }
     }
 
-    /* Horizontal Filter Bar Styling */
+    /* Barre de filtres épurée sans bordures */
     div[data-testid="stHorizontalBlock"] {
         background: white;
-        padding: 1.5rem;
+        padding: 1rem;
         border-radius: 16px;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         margin-bottom: 2rem;
-        align-items: end;
+        border: none !important;
     }
 
-    /* Section Cards */
+    /* Cartes de contenu sans bordures */
     .content-card {
         background: #ffffff;
-        padding: 2rem;
+        padding: 1.5rem;
         border-radius: 16px;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
         margin-bottom: 2rem;
-        border: 1px solid var(--border-color);
+        border: none !important;
     }
 
     h2 {
@@ -103,10 +105,8 @@ st.markdown("""
         border-radius: 2px;
     }
 
-    /* Form Elements focus */
-    .stSelectbox:focus, .stDateInput:focus {
-        border-color: var(--primary-color) !important;
-    }
+    /* Masquer les bordures par défaut de Streamlit */
+    hr { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -162,10 +162,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# HORIZONTAL FILTERS (Anciennement Sidebar)
+# HORIZONTAL FILTERS
 # ==========================================
-# On crée 4 colonnes pour une disposition propre sous le titre
-col1, col2, col3, col4 = st.columns([1.5, 1.2, 1.8, 1.5])
+col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 
 with col1:
     sources_raw  = run_query("SELECT DISTINCT source_name FROM articles ORDER BY source_name")
@@ -178,13 +177,7 @@ with col2:
     languages_list = ["All"] + [l[0] for l in languages_raw if l[0]]
     default_lang = "en" if "en" in languages_list else "All"
     lang_index = languages_list.index(default_lang)
-    
-    language = st.selectbox(
-        "Language",
-        languages_list,
-        index=lang_index,
-        format_func=lambda x: "All" if x == "All" else LANG_LABELS.get(x, x),
-    )
+    language = st.selectbox("Language", languages_list, index=lang_index, format_func=lambda x: "All" if x == "All" else LANG_LABELS.get(x, x))
 
 with col3:
     date_row = run_query("SELECT MIN(publish_date)::DATE, MAX(publish_date)::DATE FROM articles")
@@ -198,7 +191,6 @@ with col4:
 # DATA FILTERING LOGIC (Inchangé)
 # ==========================================
 filters, filter_params = [], []
-
 if source != "All":
     filters.append("a.source_name = ?")
     filter_params.append(source)
@@ -241,23 +233,16 @@ if word_counts:
         font_path = LATIN_FONT
 
     if words_for_cloud:
-        wc = WordCloud(
-            width=1200, height=400,
-            background_color="white",
-            max_words=max_words,
-            colormap="Blues_r",
-            font_path=font_path,
-            prefer_horizontal=0.9,
-        )
+        wc = WordCloud(width=1200, height=450, background_color="white", max_words=max_words, colormap="Blues_r", font_path=font_path, prefer_horizontal=0.9)
         wc.generate_from_frequencies(words_for_cloud)
-        fig, ax = plt.subplots(figsize=(16, 5))
+        fig, ax = plt.subplots(figsize=(16, 6))
         ax.imshow(wc, interpolation="bilinear")
         ax.axis("off")
         st.pyplot(fig)
     else:
-        st.info("No data available for the current selection.")
+        st.info("No data available.")
 else:
-    st.info("No data matches selected filters.")
+    st.info("No data matches filters.")
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -271,16 +256,8 @@ top_words = list(words_dict.keys())[:200] if word_counts else []
 if top_words:
     if "trends_words" not in st.session_state:
         st.session_state.trends_words = [top_words[0]] if top_words else []
-    else:
-        st.session_state.trends_words = [w for w in st.session_state.trends_words if w in top_words]
-        if not st.session_state.trends_words and top_words:
-            st.session_state.trends_words = [top_words[0]]
-
-    selected_words = st.multiselect(
-        "Track keyword frequency over time",
-        options=top_words,
-        key="trends_words"
-    )
+    
+    selected_words = st.multiselect("Track keyword frequency over time", options=top_words, key="trends_words")
 
     if selected_words:
         escaped = ", ".join(f"'{w.replace(chr(39), chr(39)+chr(39))}'" for w in selected_words)
@@ -292,44 +269,18 @@ if top_words:
                 WHERE {where_clause}
             ),
             daily_counts AS (
-                SELECT date, word, COUNT(*) as count
-                FROM filtered
-                WHERE word IN ({escaped})
-                GROUP BY date, word
+                SELECT date, word, COUNT(*) as count FROM filtered WHERE word IN ({escaped}) GROUP BY date, word
             ),
             daily_totals AS (
-                SELECT date, COUNT(*) as total
-                FROM filtered
-                GROUP BY date
+                SELECT date, COUNT(*) as total FROM filtered GROUP BY date
             )
             SELECT d.date, d.word, d.count * 1.0 / t.total AS share
-            FROM daily_counts d
-            JOIN daily_totals t ON d.date = t.date
-            ORDER BY d.date
+            FROM daily_counts d JOIN daily_totals t ON d.date = t.date ORDER BY d.date
         """, filter_params)
 
         if trend_data:
             df = pd.DataFrame(trend_data, columns=["Date", "Word", "Share"])
-            fig = px.line(
-                df, x="Date", y="Share", color="Word",
-                markers=True, line_shape="spline",
-                color_discrete_sequence=px.colors.qualitative.Prism
-            )
-            fig.update_layout(
-                height=400,
-                margin=dict(l=0, r=0, t=10, b=0),
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                xaxis=dict(showgrid=True, gridcolor="#f1f5f9", title=""),
-                yaxis=dict(showgrid=True, gridcolor="#f1f5f9", title="Frequency Share", tickformat=".1%"),
-                legend=dict(orientation="h", y=-0.2, x=0),
-                font=dict(family="Plus Jakarta Sans", size=12),
-            )
+            fig = px.line(df, x="Date", y="Share", color="Word", markers=True, line_shape="spline", color_discrete_sequence=px.colors.qualitative.Prism)
+            fig.update_layout(height=450, margin=dict(l=0, r=0, t=10, b=0), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Plus Jakarta Sans", size=12))
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("Insufficient data for the selected keywords.")
-    else:
-        st.caption("Select keywords to visualize trends.")
-else:
-    st.caption("Adjust filters to refresh available keywords.")
 st.markdown('</div>', unsafe_allow_html=True)
